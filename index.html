@@ -388,8 +388,84 @@
         .danger-zone { border: 2px solid #ef4444; border-radius: var(--radius); padding: 16px; margin-top: 8px; }
         .danger-title { font-size: 13px; font-weight: 900; color: #ef4444; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
 
-        /* trial zone */
-        .trial-zone { border: 2px solid #f59e0b; border-radius: var(--radius); padding: 16px; scroll-margin-top: 80px; }
+        /* ---- TOAST ---- */
+        .toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+            background: #1e293b; color: white;
+            padding: 12px 22px; border-radius: 50px;
+            font-size: 13px; font-weight: 700;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            z-index: 9999; transition: transform 0.3s ease, opacity 0.3s ease;
+            opacity: 0; white-space: nowrap;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .toast.success { background: linear-gradient(135deg,#059669,#047857); }
+        .toast.error   { background: linear-gradient(135deg,#ef4444,#b91c1c); }
+        .modal-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: white;
+            border-radius: 20px;
+            padding: 28px 24px;
+            width: 100%;
+            max-width: 340px;
+            box-shadow: 0 20px 60px rgba(26,86,219,0.25);
+            animation: modalIn 0.2s ease;
+        }
+        @keyframes modalIn {
+            from { transform: scale(0.92) translateY(10px); opacity: 0; }
+            to   { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .modal-icon { font-size: 36px; text-align: center; margin-bottom: 10px; }
+        .modal-title { font-size: 17px; font-weight: 900; color: var(--text); text-align: center; margin-bottom: 4px; }
+        .modal-sub { font-size: 12px; color: var(--text-light); text-align: center; margin-bottom: 20px; }
+        .modal-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 18px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-align: center;
+            margin-bottom: 14px;
+            transition: border-color 0.2s;
+        }
+        .modal-input:focus { outline: none; border-color: var(--blue3); }
+        .modal-input.error { border-color: #ef4444; animation: shake 0.3s ease; }
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+        .modal-error { font-size: 12px; color: #ef4444; text-align: center; margin-bottom: 10px; font-weight: 700; display: none; }
+        .modal-error.show { display: block; }
+        .modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .modal-btn {
+            padding: 13px;
+            border-radius: 50px;
+            font-size: 12px;
+            font-weight: 900;
+            font-family: 'Nunito', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .modal-btn:active { transform: scale(0.97); }
+        .modal-btn.cancel { background: #f1f5f9; color: var(--text-light); }
+        .modal-btn.confirm { background: var(--gradient); color: white; box-shadow: 0 4px 14px rgba(26,86,219,0.3); }
         .btn-trial-quick {
             margin-left: auto;
             background: linear-gradient(135deg, #f59e0b, #d97706);
@@ -684,9 +760,8 @@
                 <span class="trial-badge">Trial</span>
             </div>
             <p style="font-size:12px; color:#78716c; margin-bottom:14px;">Add models currently under trial — no CT or target required. These appear as selectable models in the main form tagged as <strong>[TRIAL]</strong>.</p>
-            <div style="display:grid; grid-template-columns: 1.5fr 1.5fr auto; gap:8px; margin-bottom:14px;">
+            <div class="admin-input-row">
                 <input class="plain-input" type="text" id="admTrialModel" placeholder="Trial Model Name">
-                <div class="select-wrap"><select class="plain-input" id="admTrialStage"></select></div>
                 <button class="btn-sm trial-add" onclick="addTrialModel()">+ Add</button>
             </div>
             <div id="list-trials"></div>
@@ -700,6 +775,25 @@
 
     </div>
 </div><!-- /view-admin -->
+
+<!-- TOAST -->
+<div class="toast" id="toastEl"></div>
+
+<!-- ===================== PASSWORD MODAL ===================== -->
+<div class="modal-overlay" id="pwModal">
+    <div class="modal-box">
+        <div class="modal-icon" id="modalIcon">🔐</div>
+        <div class="modal-title" id="modalTitle">Admin Access</div>
+        <div class="modal-sub" id="modalSub">Enter the admin password to continue</div>
+        <input class="modal-input" type="password" id="modalPwInput" placeholder="••••••••" maxlength="20"
+               onkeydown="if(event.key==='Enter') modalConfirm()">
+        <div class="modal-error" id="modalError">Incorrect password. Try again.</div>
+        <div class="modal-btns">
+            <button class="modal-btn cancel" onclick="modalClose()">Cancel</button>
+            <button class="modal-btn confirm" id="modalConfirmBtn" onclick="modalConfirm()">Confirm</button>
+        </div>
+    </div>
+</div>
 
 <script>
     const SUB_URL = 'https://tocozfzkgnhodnhlnkpp.supabase.co';
@@ -743,9 +837,65 @@
         window.scrollTo(0, 0);
     }
 
+    // ---- TOAST ----
+    let _toastTimer = null;
+    function showToast(msg, type = 'default') {
+        const el = document.getElementById('toastEl');
+        el.innerText = msg;
+        el.className = `toast ${type} show`;
+        if(_toastTimer) clearTimeout(_toastTimer);
+        _toastTimer = setTimeout(() => { el.classList.remove('show'); }, 2800);
+    }
+
+    // ---- MODAL PASSWORD SYSTEM ----
+    let _modalCallback = null;
+
+    function showPasswordModal({ icon = '🔐', title = 'Admin Access', sub = 'Enter the admin password to continue', confirmLabel = 'Confirm', onSuccess }) {
+        _modalCallback = onSuccess;
+        document.getElementById('modalIcon').innerText = icon;
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalSub').innerText = sub;
+        document.getElementById('modalConfirmBtn').innerText = confirmLabel;
+        document.getElementById('modalPwInput').value = '';
+        document.getElementById('modalError').classList.remove('show');
+        document.getElementById('modalPwInput').classList.remove('error');
+        document.getElementById('pwModal').classList.add('open');
+        setTimeout(() => document.getElementById('modalPwInput').focus(), 100);
+    }
+
+    function modalClose() {
+        document.getElementById('pwModal').classList.remove('open');
+        _modalCallback = null;
+    }
+
+    function modalConfirm() {
+        const val = document.getElementById('modalPwInput').value;
+        if(val === 'sachin10') {
+            modalClose();
+            if(_modalCallback) _modalCallback();
+        } else {
+            const inp = document.getElementById('modalPwInput');
+            inp.classList.add('error');
+            document.getElementById('modalError').classList.add('show');
+            inp.value = '';
+            setTimeout(() => inp.classList.remove('error'), 400);
+            inp.focus();
+        }
+    }
+
+    // Close modal on overlay click
+    document.getElementById('pwModal').addEventListener('click', function(e) {
+        if(e.target === this) modalClose();
+    });
+
     function authAdmin() {
-        if(prompt("Admin Password:") === "sachin10") showView('view-admin');
-        else alert("Denied");
+        showPasswordModal({
+            icon: '🔐',
+            title: 'Admin Access',
+            sub: 'Enter the admin password to continue',
+            confirmLabel: 'Unlock',
+            onSuccess: () => showView('view-admin')
+        });
     }
 
     function addStage() {
@@ -774,25 +924,24 @@
     }
 
     function quickAddTrial(modelName, stage) {
-        const exists = master.trialModels.some(t => t.name === modelName && t.stage === stage);
+        const exists = master.trialModels.some(t => t.name === modelName);
         if(!exists) {
-            master.trialModels.push({ name: modelName, stage });
+            master.trialModels.push({ name: modelName });
             saveMaster().then(renderAdminLists);
         } else {
-            alert(`${modelName} (${stage}) is already a trial model.`);
+            alert(`${modelName} is already a trial model.`);
         }
     }
 
     function addTrialModel() {
         const name = document.getElementById('admTrialModel').value.trim();
-        const stage = document.getElementById('admTrialStage').value;
-        if(!name || !stage) return;
-        const exists = master.trialModels.some(t => t.name === name && t.stage === stage);
+        if(!name) return;
+        const exists = master.trialModels.some(t => t.name === name);
         if(!exists) {
-            master.trialModels.push({ name, stage });
+            master.trialModels.push({ name });
             saveMaster().then(renderAdminLists);
             document.getElementById('admTrialModel').value = "";
-        } else { alert("Trial model already exists for this stage."); }
+        } else { alert("Trial model already exists."); }
     }
 
     function removeTrialModel(index) {
@@ -863,14 +1012,13 @@
         const stOptions = master.stages.map(st => `<option value="${st}">${st}</option>`).join('');
         document.getElementById('admModelStage').innerHTML = stOptions;
         document.getElementById('admDefectStage').innerHTML = stOptions;
-        document.getElementById('admTrialStage').innerHTML = stOptions;
 
         let mHTML = "";
         for(let m in modelData) {
             mHTML += `<div class="model-card">
                 <div class="model-card-title">📦 ${m}</div>
                 ${Object.entries(modelData[m]).map(([st, val]) => {
-                    const isTrial = master.trialModels.some(t => t.name === m && t.stage === st);
+                    const isTrial = master.trialModels.some(t => t.name === m);
                     return `<div class="list-item" style="font-size:11px;padding:5px 10px;">
                         ${st}: ${val.ct}s (T:${val.target})
                         <div style="display:flex;gap:4px;align-items:center;">
@@ -901,7 +1049,7 @@
         document.getElementById('list-trials').innerHTML = master.trialModels.length
             ? master.trialModels.map((t, i) => `
                 <div class="trial-list-item">
-                    <span>🧪 <strong>${t.name}</strong> <span style="font-size:11px; color:#b45309; font-weight:600;">— ${t.stage}</span></span>
+                    <span>🧪 <strong>${t.name}</strong></span>
                     <button class="btn-sm del" onclick="removeTrialModel(${i})">✕</button>
                 </div>`).join('')
             : '<p style="font-size:12px;color:#a8a29e;text-align:center;">No trial models yet.</p>';
@@ -914,7 +1062,7 @@
 
         // Combine normal models + trial models with [TRIAL] label
         const normalModels = Object.keys(modelData).map(m => `<option value="${m}">${m}</option>`).join('');
-        const trialOpts = master.trialModels.map(t => `<option value="[TRIAL] ${t.name} (${t.stage})">[TRIAL] ${t.name} (${t.stage})</option>`).join('');
+        const trialOpts = master.trialModels.map(t => `<option value="[TRIAL] ${t.name}">[TRIAL] ${t.name}</option>`).join('');
         document.getElementById('iModel').innerHTML = normalModels + (trialOpts ? `<optgroup label="── Trial Models ──">${trialOpts}</optgroup>` : '');
 
         const zlSelect = document.getElementById('iZL');
@@ -974,9 +1122,9 @@
             bd_details: bdrValues.join(",")
         };
         const { error } = await sb.from('production_logs').insert([entry]);
-        if(error) alert(error.message);
+        if(error) showToast(error.message, 'error');
         else {
-            alert("✅ Submitted!");
+            showToast('✅ Entry submitted!', 'success');
             document.getElementById('iAct').value = "";
             document.getElementById('iRej').value = "";
             document.getElementById('iOpID').value = "";
@@ -1012,10 +1160,10 @@
     }
 
     async function deleteRecord(id) {
-        if(confirm("Are you sure?")) {
+        if(confirm("Delete this record?")) {
             const { error } = await sb.from('production_logs').delete().eq('id', id);
-            if(error) alert(error.message);
-            else { renderData(); }
+            if(error) showToast(error.message, 'error');
+            else { showToast('Record deleted.', 'success'); renderData(); }
         }
     }
 
@@ -1026,17 +1174,21 @@
         logs.forEach(l => {
             text += `${l.stage}|${l.model}|${l.opid}|${l.plan}|${l.act}|${l.rej}|${l.reasons}|${l.bd_reasons}|${l.bd_details}|${l.time}\n`;
         });
-        navigator.clipboard.writeText(text).then(() => alert("Copied!"));
+        navigator.clipboard.writeText(text).then(() => showToast('📋 Copied to clipboard!', 'success'));
     }
 
     async function wipeDatabase() {
-        if (confirm("WARNING: Permanently delete ALL logs?")) {
-            if (prompt("Admin Password:") === "sachin10") {
+        showPasswordModal({
+            icon: '🗑',
+            title: 'Wipe All Logs?',
+            sub: 'This will permanently delete ALL production logs. Enter the admin password to confirm.',
+            confirmLabel: 'Wipe',
+            onSuccess: async () => {
                 const { error } = await sb.from('production_logs').delete().neq('id', 0);
-                if (error) alert(error.message);
-                else { alert("Wiped!"); logs = []; renderData(); }
-            } else alert("Denied.");
-        }
+                if(error) showToast(error.message, 'error');
+                else { logs = []; renderData(); showToast('All logs wiped.', 'success'); }
+            }
+        });
     }
 
     window.onload = initApp;
