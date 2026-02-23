@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Production Control Hub</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blue1: #1a56db;
+            --blue2: #1e40af;
+            --blue3: #3b82f6;
+            --blue-light: #eff6ff;
+            --blue-mid: #dbeafe;
+            --gradient: linear-gradient(135deg, #1a56db 0%, #6366f1 100%);
+            --gradient-card: linear-gradient(145deg, #1e40af 0%, #7c3aed 100%);
+            --bg: #f0f4ff;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --shadow: 0 4px 20px rgba(59, 130, 246, 0.12);
+            --shadow-lg: 0 10px 40px rgba(26, 86, 219, 0.2);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ---- VIEWS ---- */
+        .view { display: none; min-height: 100vh; }
+        .view.active { display: block; }
+
+        /* ---- TOP HEADER BANNER ---- */
+        .app-banner {
+            background: var(--gradient);
+            padding: 20px 20px 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        .app-banner::before {
+            content: '';
+            position: absolute;
+            top: -40px; right: -40px;
+            width: 200px; height: 200px;
+            background: rgba(255,255,255,0.07);
+            border-radius: 50%;
+        }
+        .app-banner::after {
+            content: '';
+            position: absolute;
+            bottom: -60px; left: 30%;
+            width: 280px; height: 280px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+        .banner-top { display: flex; justify-content: space-between; align-items: center; }
+        .banner-logo { display: flex; align-items: center; gap: 10px; }
+        .logo-icon {
+            width: 42px; height: 42px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+        }
+        .banner-title { color: white; font-size: 16px; font-weight: 900; letter-spacing: 0.5px; }
+        .banner-sub { color: rgba(255,255,255,0.7); font-size: 11px; font-weight: 600; }
+        .btn-admin-ghost {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            font-family: 'Nunito', sans-serif;
+            backdrop-filter: blur(4px);
+            transition: background 0.2s;
+        }
+        .btn-admin-ghost:hover { background: rgba(255,255,255,0.25); }
+
+        /* HUD pills */
+        .hud-row {
+            display: flex; gap: 12px;
+            margin-top: 18px;
+            position: relative; z-index: 1;
+        }
+        .hud-pill {
+            flex: 1;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: white;
+        }
+        .hud-pill .label { font-size: 9px; font-weight: 800; opacity: 0.75; text-transform: uppercase; letter-spacing: 1px; }
+        .hud-pill .value { font-size: 22px; font-weight: 900; }
+
+        /* ---- MAIN CONTENT AREA ---- */
+        .content-area {
+            padding: 0 16px 40px;
+            margin-top: -32px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ---- CARDS ---- */
+        .card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.8);
+        }
+        .card-title {
+            font-size: 13px;
+            font-weight: 900;
+            color: var(--blue1);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-title::before {
+            content: '';
+            width: 4px; height: 16px;
+            background: var(--gradient);
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        /* ---- FORM ELEMENTS ---- */
+        .form-group { margin-bottom: 14px; }
+        .form-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            font-size: 16px;
+            color: var(--blue3);
+            pointer-events: none;
+            z-index: 1;
+        }
+        .input-wrap input,
+        .input-wrap select {
+            width: 100%;
+            padding: 13px 14px 13px 42px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            color: var(--text);
+            background: #fafbff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        .input-wrap input:focus,
+        .input-wrap select:focus {
+            outline: none;
+            border-color: var(--blue3);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+            background: white;
+        }
+        /* plain input (no icon) */
+        .plain-input {
+            width: 100%;
+            padding: 13px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            color: var(--text);
+            background: #fafbff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .plain-input:focus {
+            outline: none;
+            border-color: var(--blue3);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+            background: white;
+        }
+        select.plain-input { appearance: none; -webkit-appearance: none; }
+
+        /* Select arrow */
+        .select-wrap { position: relative; }
+        .select-wrap::after {
+            content: '▾';
+            position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+            color: var(--blue3); pointer-events: none; font-size: 14px;
+        }
+        .input-wrap .select-wrap { width: 100%; }
+        .input-wrap .select-wrap select { width: 100%; }
+
+        /* 3-col grid */
+        .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        /* Multi select */
+        select[multiple] {
+            width: 100%;
+            padding: 10px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            color: var(--text);
+            background: #fafbff;
+            min-height: 120px;
+        }
+        select[multiple]:focus {
+            outline: none;
+            border-color: var(--blue3);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+        select[multiple] option:checked {
+            background: var(--blue-mid);
+            color: var(--blue2);
+            font-weight: 700;
+        }
+
+        /* ---- BUTTONS ---- */
+        .btn-pill {
+            width: 100%;
+            padding: 15px;
+            background: var(--gradient);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 13px;
+            font-weight: 900;
+            font-family: 'Nunito', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(26, 86, 219, 0.35);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .btn-pill:active { transform: scale(0.98); box-shadow: 0 3px 10px rgba(26,86,219,0.25); }
+        .btn-pill.danger { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 6px 20px rgba(239,68,68,0.3); }
+        .btn-pill.success { background: linear-gradient(135deg, #059669, #047857); box-shadow: 0 6px 20px rgba(5,150,105,0.3); }
+        .btn-pill.outline {
+            background: transparent;
+            border: 2px solid var(--blue3);
+            color: var(--blue1);
+            box-shadow: none;
+        }
+        .btn-sm {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 800;
+            font-family: 'Nunito', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.15s;
+        }
+        .btn-sm:active { transform: scale(0.96); }
+        .btn-sm.add { background: var(--gradient); color: white; box-shadow: 0 3px 10px rgba(26,86,219,0.25); }
+        .btn-sm.del { background: linear-gradient(135deg,#ef4444,#b91c1c); color: white; padding: 4px 10px; font-size: 10px; }
+
+        /* ---- ARCHIVE FILTER BAR ---- */
+        .filter-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: var(--blue-mid);
+            padding: 14px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 14px;
+        }
+        .filter-bar label { font-size: 10px; font-weight: 800; color: var(--blue2); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 5px; }
+
+        /* ---- TABLE ---- */
+        .table-wrapper { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; min-width: 1300px; }
+        thead tr { background: var(--gradient); }
+        th { padding: 11px 10px; font-size: 9px; font-weight: 800; color: white; text-transform: uppercase; letter-spacing: 0.8px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 12px; font-weight: 600; }
+        tr:hover td { background: var(--blue-light); }
+        .badge-delete {
+            padding: 4px 10px;
+            background: linear-gradient(135deg,#ef4444,#b91c1c);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 800;
+            font-family: 'Nunito', sans-serif;
+            cursor: pointer;
+        }
+
+        /* ---- ADMIN VIEW ---- */
+        .admin-header {
+            background: var(--gradient);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .admin-header h2 { color: white; font-size: 15px; font-weight: 900; margin: 0; }
+        .btn-back {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.35);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            font-family: 'Nunito', sans-serif;
+        }
+        .admin-content { padding: 16px; }
+
+        /* list items in admin */
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background: var(--blue-light);
+            border: 1px solid var(--blue-mid);
+            border-radius: var(--radius-sm);
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--blue2);
+        }
+        .admin-input-row { display: flex; gap: 8px; margin-bottom: 14px; }
+        .admin-input-row input,
+        .admin-input-row select {
+            flex: 1;
+            padding: 11px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 600;
+            background: #fafbff;
+        }
+        .admin-input-row input:focus,
+        .admin-input-row select:focus { outline: none; border-color: var(--blue3); }
+
+        /* model grid */
+        .model-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+        .model-card {
+            border: 1px solid var(--blue-mid);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            background: white;
+        }
+        .model-card-title { font-weight: 900; font-size: 12px; color: var(--blue1); border-bottom: 1px solid var(--blue-mid); padding-bottom: 6px; margin-bottom: 6px; }
+
+        /* danger zone */
+        .danger-zone { border: 2px solid #ef4444; border-radius: var(--radius); padding: 16px; margin-top: 8px; }
+        .danger-title { font-size: 13px; font-weight: 900; color: #ef4444; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+
+        /* trial zone */
+        .trial-zone { border: 2px solid #f59e0b; border-radius: var(--radius); padding: 16px; scroll-margin-top: 80px; }
+        .btn-trial-quick {
+            margin-left: auto;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 900;
+            cursor: pointer;
+            font-family: 'Nunito', sans-serif;
+            letter-spacing: 0.5px;
+            box-shadow: 0 3px 12px rgba(245,158,11,0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .btn-trial-quick:hover { transform: scale(1.04); box-shadow: 0 5px 16px rgba(245,158,11,0.5); }
+        .trial-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white; font-size: 9px; font-weight: 900;
+            padding: 3px 10px; border-radius: 20px;
+            letter-spacing: 1px; text-transform: uppercase;
+            vertical-align: middle; margin-left: 8px;
+        }
+        .trial-list-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: var(--radius-sm);
+            margin-bottom: 6px;
+            font-size: 13px; font-weight: 700;
+            color: #92400e;
+        }
+        .btn-sm.trial-add { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; box-shadow: 0 3px 10px rgba(245,158,11,0.3); }
+
+        /* BD area */
+        #bd-dynamic-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        @media (min-width: 768px) {
+            .content-area { padding: 0 24px 60px; max-width: 960px; margin: -32px auto 0; }
+            .admin-content { max-width: 960px; margin: 0 auto; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===================== MAIN VIEW ===================== -->
+<div id="view-main" class="view active">
+
+    <div class="app-banner">
+        <div class="banner-top">
+            <div class="banner-logo">
+                <div class="logo-icon">🏭</div>
+                <div>
+                    <div class="banner-title">PRODUCTION HUB</div>
+                    <div class="banner-sub">Cloud Control System</div>
+                </div>
+            </div>
+            <button class="btn-admin-ghost" onclick="authAdmin()">⚙ Admin</button>
+        </div>
+        <div class="hud-row">
+            <div class="hud-pill">
+                <div class="label">Plan Target</div>
+                <div class="value" id="hTgt">0</div>
+            </div>
+            <div class="hud-pill">
+                <div class="label">CT Rate (s)</div>
+                <div class="value" id="hCT">0.00</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-area">
+
+        <!-- SECTION 1: SHIFT IDENTITY -->
+        <div class="card">
+            <div class="card-title">Shift Identity</div>
+
+            <div class="form-group">
+                <label class="form-label">Date</label>
+                <div class="input-wrap">
+                    <span class="input-icon">📅</span>
+                    <input type="date" id="iDate">
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="form-group">
+                    <label class="form-label">Shift</label>
+                    <div class="select-wrap">
+                        <select class="plain-input" id="iShift">
+                            <option>A</option><option>B</option><option>C</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Zone Leader</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">👷</span>
+                        <div class="select-wrap" style="width:100%">
+                            <select id="iZL">
+                                <option value="">-- Select ZL --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 2: PRODUCTION ENTRY -->
+        <div class="card">
+            <div class="card-title">Production Entry</div>
+
+            <div class="two-col">
+                <div class="form-group">
+                    <label class="form-label">Stage</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">🔧</span>
+                        <div class="select-wrap" style="width:100%">
+                            <select id="iStage" onchange="syncLogic()"></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Model</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">📦</span>
+                        <div class="select-wrap" style="width:100%">
+                            <select id="iModel" onchange="syncLogic()"></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Operator ID</label>
+                <div class="input-wrap">
+                    <span class="input-icon">🪪</span>
+                    <input type="text" id="iOpID" placeholder="ID1 / ID2 ...">
+                </div>
+            </div>
+
+            <div class="three-col">
+                <div class="form-group">
+                    <label class="form-label">Plan</label>
+                    <input class="plain-input" type="number" id="iPlan">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Actual</label>
+                    <input class="plain-input" type="number" id="iAct">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Rejection</label>
+                    <input class="plain-input" type="number" id="iRej">
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 3: REASONS & BREAKDOWN -->
+        <div class="card">
+            <div class="card-title">Reasons & Breakdown</div>
+
+            <div class="two-col">
+                <div class="form-group">
+                    <label class="form-label">Defect Reasons</label>
+                    <select id="iReason" multiple></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">B/D Reason</label>
+                    <select id="iBD" multiple onchange="handleBD()"></select>
+                </div>
+            </div>
+
+            <div class="form-group" style="max-width:180px;">
+                <label class="form-label">Actual Time (Min)</label>
+                <div class="input-wrap">
+                    <span class="input-icon">⏱</span>
+                    <input type="number" id="iTime" placeholder="Minutes">
+                </div>
+            </div>
+
+            <div id="bd-area" style="display:none; margin-bottom:14px;">
+                <div id="bd-dynamic-container"></div>
+            </div>
+
+            <button class="btn-pill" onclick="saveRecord()">✔ Submit Production Entry</button>
+        </div>
+
+        <!-- SECTION 4: ARCHIVES -->
+        <div class="card">
+            <div class="card-title">Archives</div>
+            <div class="filter-bar">
+                <div>
+                    <label>Filter Date</label>
+                    <input class="plain-input" type="date" id="fDate" onchange="renderData()">
+                </div>
+                <div>
+                    <label>Filter Shift</label>
+                    <div class="select-wrap">
+                        <select class="plain-input" id="fShift" onchange="renderData()">
+                            <option value="ALL">ALL</option>
+                            <option>A</option><option>B</option><option>C</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th><th>Shift</th><th>ZL</th><th>Stage</th><th>Model</th>
+                            <th>Operator</th><th>Plan</th><th>Actual</th><th>Rejection</th>
+                            <th>Reason</th><th>B/D Reason</th><th>Breakdown</th><th>Time</th><th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logBody"></tbody>
+                </table>
+            </div>
+            <div style="margin-top:12px;">
+                <button class="btn-pill success" onclick="copyData()">📋 Copy Filtered Data</button>
+            </div>
+        </div>
+
+    </div>
+</div><!-- /view-main -->
+
+
+<!-- ===================== ADMIN VIEW ===================== -->
+<div id="view-admin" class="view">
+    <div class="admin-header">
+        <button class="btn-back" onclick="showView('view-main')">← Back</button>
+        <h2>System Configuration</h2>
+        <button class="btn-trial-quick" onclick="scrollToTrials()">🧪 Trial</button>
+    </div>
+
+    <div class="admin-content">
+
+        <div class="card">
+            <div class="card-title">Stage Management</div>
+            <div class="admin-input-row">
+                <input type="text" id="admNewStage" placeholder="New Stage Name">
+                <button class="btn-sm add" onclick="addStage()">+ Add</button>
+            </div>
+            <div id="list-stages"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">B/D Reasons</div>
+            <div class="admin-input-row">
+                <input type="text" id="admNewBD" placeholder="New B/D Reason">
+                <button class="btn-sm add" onclick="addBD()">+ Add</button>
+            </div>
+            <div id="list-bds"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">👷 Zone Leader Management</div>
+            <div class="admin-input-row">
+                <input type="text" id="admNewZL" placeholder="Zone Leader Name">
+                <button class="btn-sm add" onclick="addZoneLeader()">+ Add</button>
+            </div>
+            <div id="list-zls"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Model CT & Target Management</div>
+            <div style="display:grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr auto; gap:8px; margin-bottom:12px;">
+                <input class="plain-input" type="text" id="admModelNum" placeholder="Model #">
+                <div class="select-wrap"><select class="plain-input" id="admModelStage"></select></div>
+                <input class="plain-input" type="number" id="admModelCT" step="0.01" placeholder="CT (s)">
+                <input class="plain-input" type="number" id="admModelTgt" placeholder="Target">
+                <button class="btn-sm add" onclick="addModelCT()">Save</button>
+            </div>
+            <div class="model-grid" id="list-models"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Defect Management (Per Stage)</div>
+            <div style="display:grid; grid-template-columns: 1.5fr 2fr auto; gap:8px; margin-bottom:14px;">
+                <div class="select-wrap"><select class="plain-input" id="admDefectStage"></select></div>
+                <input class="plain-input" type="text" id="admDefectName" placeholder="Defect Description">
+                <button class="btn-sm add" onclick="addDefect()">+ Add</button>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:10px;" id="list-defects"></div>
+        </div>
+
+        <!-- TRIAL MODELS SECTION -->
+        <div class="trial-zone" id="trial-section">
+            <div class="card-title" style="color:#d97706; margin-bottom:16px;">
+                🧪 Trial Models
+                <span class="trial-badge">Trial</span>
+            </div>
+            <p style="font-size:12px; color:#78716c; margin-bottom:14px;">Add models currently under trial — no CT or target required. These appear as selectable models in the main form tagged as <strong>[TRIAL]</strong>.</p>
+            <div style="display:grid; grid-template-columns: 1.5fr 1.5fr auto; gap:8px; margin-bottom:14px;">
+                <input class="plain-input" type="text" id="admTrialModel" placeholder="Trial Model Name">
+                <div class="select-wrap"><select class="plain-input" id="admTrialStage"></select></div>
+                <button class="btn-sm trial-add" onclick="addTrialModel()">+ Add</button>
+            </div>
+            <div id="list-trials"></div>
+        </div>
+
+        <div style="margin-top:16px;" class="danger-zone">
+            <div class="danger-title">⚠ Danger Zone</div>
+            <p style="font-size:12px; color:#64748b; margin-bottom:12px;">Permanently delete all production logs from the cloud database.</p>
+            <button class="btn-pill danger" onclick="wipeDatabase()">🗑 Wipe All Production Logs</button>
+        </div>
+
+    </div>
+</div><!-- /view-admin -->
+
+<script>
+    const SUB_URL = 'https://tocozfzkgnhodnhlnkpp.supabase.co';
+    const SUB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvY296ZnprZ25ob2RuaGxua3BwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNzQ2NDEsImV4cCI6MjA4NTk1MDY0MX0.0BKRCocq9O7SsHcXi2JmS3pFBAS6pFTOQCPeybOCFe0';
+    const sb = supabase.createClient(SUB_URL, SUB_KEY);
+
+    let master = { stages: [], bds: [], defects: {}, zoneLeaders: [], trialModels: [] };
+    // trialModels: [{ name: "ModelX", stage: "ST1" }, ...]
+    let modelData = {};
+    let logs = [];
+
+    async function initApp() {
+        await loadConfig();
+        await renderData();
+        populateDropdowns();
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('iDate').value = today;
+        document.getElementById('fDate').value = today;
+    }
+
+    async function loadConfig() {
+        const { data } = await sb.from('system_config').select('*');
+        if (data) {
+            const m = data.find(r => r.id === 'master');
+            const md = data.find(r => r.id === 'models');
+            if(m) { master = m.data; if(!master.zoneLeaders) master.zoneLeaders = []; if(!master.trialModels) master.trialModels = []; }
+            if(md) modelData = md.data;
+        }
+    }
+
+    async function saveMaster() {
+        await sb.from('system_config').upsert({ id: 'master', data: master });
+        await sb.from('system_config').upsert({ id: 'models', data: modelData });
+        populateDropdowns();
+    }
+
+    function showView(id) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id === 'view-admin') renderAdminLists();
+        window.scrollTo(0, 0);
+    }
+
+    function authAdmin() {
+        if(prompt("Admin Password:") === "sachin10") showView('view-admin');
+        else alert("Denied");
+    }
+
+    function addStage() {
+        const val = document.getElementById('admNewStage').value.trim();
+        if(!val) return;
+        if(!master.stages.includes(val)) {
+            master.stages.push(val);
+            if(!master.defects[val]) master.defects[val] = [];
+            saveMaster().then(renderAdminLists);
+            document.getElementById('admNewStage').value = "";
+        }
+    }
+
+    function addBD() {
+        const val = document.getElementById('admNewBD').value.trim();
+        if(!val) return;
+        if(!master.bds.includes(val)) {
+            master.bds.push(val);
+            saveMaster().then(renderAdminLists);
+            document.getElementById('admNewBD').value = "";
+        }
+    }
+
+    function scrollToTrials() {
+        document.getElementById('trial-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function quickAddTrial(modelName, stage) {
+        const exists = master.trialModels.some(t => t.name === modelName && t.stage === stage);
+        if(!exists) {
+            master.trialModels.push({ name: modelName, stage });
+            saveMaster().then(renderAdminLists);
+        } else {
+            alert(`${modelName} (${stage}) is already a trial model.`);
+        }
+    }
+
+    function addTrialModel() {
+        const name = document.getElementById('admTrialModel').value.trim();
+        const stage = document.getElementById('admTrialStage').value;
+        if(!name || !stage) return;
+        const exists = master.trialModels.some(t => t.name === name && t.stage === stage);
+        if(!exists) {
+            master.trialModels.push({ name, stage });
+            saveMaster().then(renderAdminLists);
+            document.getElementById('admTrialModel').value = "";
+        } else { alert("Trial model already exists for this stage."); }
+    }
+
+    function removeTrialModel(index) {
+        master.trialModels.splice(index, 1);
+        saveMaster().then(renderAdminLists);
+    }
+
+    function addZoneLeader() {
+        const val = document.getElementById('admNewZL').value.trim();
+        if(!val) return;
+        if(!master.zoneLeaders.includes(val)) {
+            master.zoneLeaders.push(val);
+            saveMaster().then(renderAdminLists);
+            document.getElementById('admNewZL').value = "";
+        } else { alert("Zone Leader already exists."); }
+    }
+
+    function addDefect() {
+        const st = document.getElementById('admDefectStage').value;
+        const name = document.getElementById('admDefectName').value.trim();
+        if(!st || !name) return;
+        if(!master.defects[st]) master.defects[st] = [];
+        if(!master.defects[st].includes(name)) {
+            master.defects[st].push(name);
+            saveMaster().then(renderAdminLists);
+            document.getElementById('admDefectName').value = "";
+        }
+    }
+
+    function addModelCT() {
+        const model = document.getElementById('admModelNum').value.trim();
+        const stage = document.getElementById('admModelStage').value;
+        const ct = parseFloat(document.getElementById('admModelCT').value);
+        const tgt = parseInt(document.getElementById('admModelTgt').value);
+        if(!model || isNaN(ct)) return;
+        if(!modelData[model]) modelData[model] = {};
+        modelData[model][stage] = { ct, target: tgt || 0 };
+        saveMaster().then(renderAdminLists);
+    }
+
+    function removeItem(key, index, subKey = null, thirdKey = null) {
+        if(thirdKey) {
+            delete modelData[subKey][thirdKey];
+            if(Object.keys(modelData[subKey]).length === 0) delete modelData[subKey];
+        } else if(key === 'defects') {
+            master.defects[subKey].splice(index, 1);
+        } else if(subKey) {
+            master[key][subKey].splice(index, 1);
+        } else {
+            master[key].splice(index, 1);
+        }
+        saveMaster().then(renderAdminLists);
+    }
+
+    function renderAdminLists() {
+        document.getElementById('list-stages').innerHTML = master.stages.length
+            ? master.stages.map((st, i) => `<div class="list-item">🔧 ${st} <button class="btn-sm del" onclick="removeItem('stages',${i})">✕</button></div>`).join('')
+            : '<p style="font-size:12px;color:#94a3b8;text-align:center;">No stages yet.</p>';
+
+        document.getElementById('list-bds').innerHTML = master.bds.length
+            ? master.bds.map((bd, i) => `<div class="list-item">⚡ ${bd} <button class="btn-sm del" onclick="removeItem('bds',${i})">✕</button></div>`).join('')
+            : '<p style="font-size:12px;color:#94a3b8;text-align:center;">No B/D reasons yet.</p>';
+
+        document.getElementById('list-zls').innerHTML = master.zoneLeaders.length
+            ? master.zoneLeaders.map((zl, i) => `<div class="list-item">👷 ${zl} <button class="btn-sm del" onclick="removeItem('zoneLeaders',${i})">✕</button></div>`).join('')
+            : '<p style="font-size:12px;color:#94a3b8;text-align:center;">No zone leaders yet.</p>';
+
+        const stOptions = master.stages.map(st => `<option value="${st}">${st}</option>`).join('');
+        document.getElementById('admModelStage').innerHTML = stOptions;
+        document.getElementById('admDefectStage').innerHTML = stOptions;
+        document.getElementById('admTrialStage').innerHTML = stOptions;
+
+        let mHTML = "";
+        for(let m in modelData) {
+            mHTML += `<div class="model-card">
+                <div class="model-card-title">📦 ${m}</div>
+                ${Object.entries(modelData[m]).map(([st, val]) => {
+                    const isTrial = master.trialModels.some(t => t.name === m && t.stage === st);
+                    return `<div class="list-item" style="font-size:11px;padding:5px 10px;">
+                        ${st}: ${val.ct}s (T:${val.target})
+                        <div style="display:flex;gap:4px;align-items:center;">
+                            ${isTrial
+                                ? `<span style="background:#fde68a;color:#92400e;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:900;">🧪 TRIAL</span>`
+                                : `<button class="btn-sm" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;padding:2px 8px;font-size:9px;" onclick="quickAddTrial('${m}','${st}')">🧪 Trial</button>`
+                            }
+                            <button class="btn-sm del" onclick="removeItem('modelData',null,'${m}','${st}')">✕</button>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>`;
+        }
+        document.getElementById('list-models').innerHTML = mHTML || '<p style="font-size:12px;color:#94a3b8;">No models yet.</p>';
+
+        let dHTML = "";
+        for(let st in master.defects) {
+            if(master.defects[st].length > 0) {
+                dHTML += `<div class="model-card">
+                    <div class="model-card-title">🔧 ${st}</div>
+                    ${master.defects[st].map((d, i) => `<div class="list-item" style="font-size:11px;padding:5px 10px;">${d} <button class="btn-sm del" onclick="removeItem('defects',${i},'${st}')">✕</button></div>`).join('')}
+                </div>`;
+            }
+        }
+        document.getElementById('list-defects').innerHTML = dHTML || '<p style="font-size:12px;color:#94a3b8;">No defects yet.</p>';
+
+        // Trial models
+        document.getElementById('list-trials').innerHTML = master.trialModels.length
+            ? master.trialModels.map((t, i) => `
+                <div class="trial-list-item">
+                    <span>🧪 <strong>${t.name}</strong> <span style="font-size:11px; color:#b45309; font-weight:600;">— ${t.stage}</span></span>
+                    <button class="btn-sm del" onclick="removeTrialModel(${i})">✕</button>
+                </div>`).join('')
+            : '<p style="font-size:12px;color:#a8a29e;text-align:center;">No trial models yet.</p>';
+    }
+
+    function populateDropdowns() {
+        const fill = (id, items) => document.getElementById(id).innerHTML = items.map(it => `<option value="${it}">${it}</option>`).join('');
+        fill('iStage', master.stages);
+        fill('iBD', master.bds);
+
+        // Combine normal models + trial models with [TRIAL] label
+        const normalModels = Object.keys(modelData).map(m => `<option value="${m}">${m}</option>`).join('');
+        const trialOpts = master.trialModels.map(t => `<option value="[TRIAL] ${t.name} (${t.stage})">[TRIAL] ${t.name} (${t.stage})</option>`).join('');
+        document.getElementById('iModel').innerHTML = normalModels + (trialOpts ? `<optgroup label="── Trial Models ──">${trialOpts}</optgroup>` : '');
+
+        const zlSelect = document.getElementById('iZL');
+        zlSelect.innerHTML = `<option value="">-- Select Zone Leader --</option>` +
+            master.zoneLeaders.map(zl => `<option value="${zl}">${zl}</option>`).join('');
+
+        syncLogic();
+    }
+
+    function syncLogic() {
+        const stage = document.getElementById('iStage').value;
+        const model = document.getElementById('iModel').value;
+        const isTrial = model.startsWith('[TRIAL]');
+        if(isTrial) {
+            document.getElementById('hCT').innerText = '—';
+            document.getElementById('hTgt').innerText = '—';
+            document.getElementById('iPlan').value = '';
+        } else {
+            const data = modelData[model]?.[stage] || { ct: 0, target: 0 };
+            document.getElementById('hCT').innerText = data.ct.toFixed(2);
+            document.getElementById('hTgt').innerText = data.target;
+            document.getElementById('iPlan').value = data.target;
+        }
+        const defectSelect = document.getElementById('iReason');
+        let list = master.defects[stage] || [];
+        defectSelect.innerHTML = list.map(d => `<option value="${d}">${d}</option>`).join('');
+    }
+
+    function handleBD() {
+        const selected = Array.from(document.getElementById('iBD').selectedOptions);
+        const container = document.getElementById('bd-dynamic-container');
+        container.innerHTML = "";
+        if (selected.length > 0) {
+            document.getElementById('bd-area').style.display = "block";
+            selected.forEach(opt => {
+                container.innerHTML += `<div class="form-group"><label class="form-label">${opt.value} (Min)</label><input class="plain-input" type="number" class="bd-val" placeholder="0"></div>`;
+            });
+        } else document.getElementById('bd-area').style.display = "none";
+    }
+
+    async function saveRecord() {
+        let bdrValues = [];
+        document.querySelectorAll('.bd-val').forEach(input => { if(input.value) bdrValues.push(input.value); });
+        const entry = {
+            date: document.getElementById('iDate').value,
+            shift: document.getElementById('iShift').value,
+            zl: document.getElementById('iZL').value || "N/A",
+            stage: document.getElementById('iStage').value,
+            model: document.getElementById('iModel').value,
+            opid: document.getElementById('iOpID').value || "N/A",
+            plan: parseInt(document.getElementById('iPlan').value) || 0,
+            act: parseInt(document.getElementById('iAct').value) || 0,
+            rej: parseInt(document.getElementById('iRej').value) || 0,
+            time: parseInt(document.getElementById('iTime').value) || 0,
+            reasons: Array.from(document.getElementById('iReason').selectedOptions).map(o => o.value).join(", "),
+            bd_reasons: Array.from(document.getElementById('iBD').selectedOptions).map(o => o.value).join(", "),
+            bd_details: bdrValues.join(",")
+        };
+        const { error } = await sb.from('production_logs').insert([entry]);
+        if(error) alert(error.message);
+        else {
+            alert("✅ Submitted!");
+            document.getElementById('iAct').value = "";
+            document.getElementById('iRej').value = "";
+            document.getElementById('iOpID').value = "";
+            document.getElementById('iTime').value = "";
+            // Deselect all multi-selects
+            Array.from(document.getElementById('iReason').options).forEach(o => o.selected = false);
+            Array.from(document.getElementById('iBD').options).forEach(o => o.selected = false);
+            // Hide BD dynamic area
+            document.getElementById('bd-area').style.display = "none";
+            document.getElementById('bd-dynamic-container').innerHTML = "";
+            renderData();
+        }
+    }
+
+    async function renderData() {
+        const filterDate = document.getElementById('fDate').value;
+        const filterShift = document.getElementById('fShift').value;
+        let query = sb.from('production_logs').select('*').order('created_at', { ascending: false });
+        if (filterDate) query = query.eq('date', filterDate);
+        if (filterShift !== 'ALL') query = query.eq('shift', filterShift);
+        const { data } = await query;
+        if(data) {
+            logs = data;
+            document.getElementById('logBody').innerHTML = data.map(l => `
+                <tr>
+                    <td>${l.date}</td><td>${l.shift}</td><td>${l.zl}</td><td>${l.stage}</td><td>${l.model}</td>
+                    <td>${l.opid}</td><td>${l.plan}</td><td>${l.act}</td><td>${l.rej}</td>
+                    <td>${l.reasons}</td><td>${l.bd_reasons}</td><td>${l.bd_details}</td><td>${l.time}</td>
+                    <td><button class="badge-delete" onclick="deleteRecord('${l.id}')">DELETE</button></td>
+                </tr>
+            `).join('');
+        }
+    }
+
+    async function deleteRecord(id) {
+        if(confirm("Are you sure?")) {
+            const { error } = await sb.from('production_logs').delete().eq('id', id);
+            if(error) alert(error.message);
+            else { renderData(); }
+        }
+    }
+
+    function copyData() {
+        if (logs.length === 0) return alert("No data to copy");
+        const h = logs[0];
+        let text = `${h.date} |${h.shift}| ${h.zl}\n`;
+        logs.forEach(l => {
+            text += `${l.stage}|${l.model}|${l.opid}|${l.plan}|${l.act}|${l.rej}|${l.reasons}|${l.bd_reasons}|${l.bd_details}|${l.time}\n`;
+        });
+        navigator.clipboard.writeText(text).then(() => alert("Copied!"));
+    }
+
+    async function wipeDatabase() {
+        if (confirm("WARNING: Permanently delete ALL logs?")) {
+            if (prompt("Admin Password:") === "sachin10") {
+                const { error } = await sb.from('production_logs').delete().neq('id', 0);
+                if (error) alert(error.message);
+                else { alert("Wiped!"); logs = []; renderData(); }
+            } else alert("Denied.");
+        }
+    }
+
+    window.onload = initApp;
+</script>
+</body>
+</html>
