@@ -871,8 +871,10 @@
     function modalConfirm() {
         const val = document.getElementById('modalPwInput').value;
         if(val === 'sachin10') {
-            modalClose();
-            if(_modalCallback) _modalCallback();
+            const cb = _modalCallback; // grab callback BEFORE closing (close sets it null)
+            document.getElementById('pwModal').classList.remove('open');
+            _modalCallback = null;
+            if(cb) cb();
         } else {
             const inp = document.getElementById('modalPwInput');
             inp.classList.add('error');
