@@ -1019,19 +1019,11 @@
         for(let m in modelData) {
             mHTML += `<div class="model-card">
                 <div class="model-card-title">📦 ${m}</div>
-                ${Object.entries(modelData[m]).map(([st, val]) => {
-                    const isTrial = master.trialModels.some(t => t.name === m);
-                    return `<div class="list-item" style="font-size:11px;padding:5px 10px;">
+                ${Object.entries(modelData[m]).map(([st, val]) => `
+                    <div class="list-item" style="font-size:11px;padding:5px 10px;">
                         ${st}: ${val.ct}s (T:${val.target})
-                        <div style="display:flex;gap:4px;align-items:center;">
-                            ${isTrial
-                                ? `<span style="background:#fde68a;color:#92400e;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:900;">🧪 TRIAL</span>`
-                                : `<button class="btn-sm" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;padding:2px 8px;font-size:9px;" onclick="quickAddTrial('${m}','${st}')">🧪 Trial</button>`
-                            }
-                            <button class="btn-sm del" onclick="removeItem('modelData',null,'${m}','${st}')">✕</button>
-                        </div>
-                    </div>`;
-                }).join('')}
+                        <button class="btn-sm del" onclick="removeItem('modelData',null,'${m}','${st}')">✕</button>
+                    </div>`).join('')}
             </div>`;
         }
         document.getElementById('list-models').innerHTML = mHTML || '<p style="font-size:12px;color:#94a3b8;">No models yet.</p>';
