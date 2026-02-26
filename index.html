@@ -27,6 +27,7 @@
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+        button, input, select { touch-action: manipulation; }
 
         body {
             font-family: 'Nunito', sans-serif;
@@ -546,7 +547,7 @@
                     <div class="banner-sub">Cloud Control System</div>
                 </div>
             </div>
-            <button class="btn-admin-ghost" ontouchend="event.preventDefault();authAdmin();" onclick="authAdmin()">⚙ Admin</button>
+            <button class="btn-admin-ghost" id="adminBtn">⚙ Admin</button>
         </div>
         <div class="hud-row">
             <div class="hud-pill">
@@ -816,8 +817,8 @@
                onkeydown="if(event.key==='Enter') modalConfirm()">
         <div class="modal-error" id="modalError">Incorrect password. Try again.</div>
         <div class="modal-btns">
-            <button class="modal-btn cancel" ontouchend="event.preventDefault();modalClose();" onclick="modalClose()">Cancel</button>
-            <button class="modal-btn confirm" id="modalConfirmBtn" ontouchend="event.preventDefault();modalConfirm();" onclick="modalConfirm()">Confirm</button>
+            <button class="modal-btn cancel" id="modalCancelBtn">Cancel</button>
+            <button class="modal-btn confirm" id="modalConfirmBtn">Confirm</button>
         </div>
     </div>
 </div>
@@ -925,9 +926,32 @@
         }
     }
 
-    // Close modal on overlay click — registered after DOM ready
+    // Wire all interactive buttons via JS — most reliable for mobile
     function initModal() {
-        document.getElementById('pwModal').addEventListener('click', function(e) {
+        // Helper: attach both touch and click without double-firing
+        function onTap(el, fn) {
+            let touched = false;
+            el.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                touched = true;
+                fn();
+                setTimeout(() => touched = false, 500);
+            }, { passive: false });
+            el.addEventListener('click', function() {
+                if(!touched) fn();
+            });
+        }
+
+        onTap(document.getElementById('adminBtn'), authAdmin);
+        onTap(document.getElementById('modalCancelBtn'), modalClose);
+        onTap(document.getElementById('modalConfirmBtn'), modalConfirm);
+
+        // Close on overlay backdrop tap
+        const overlay = document.getElementById('pwModal');
+        overlay.addEventListener('touchend', function(e) {
+            if(e.target === this) { e.preventDefault(); modalClose(); }
+        }, { passive: false });
+        overlay.addEventListener('click', function(e) {
             if(e.target === this) modalClose();
         });
     }
